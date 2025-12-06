@@ -37,7 +37,6 @@ export class KefirInterpreter {
       this.scopeStack = [this.globalVariables];
   }
 
-  // REPL MODE: Don't clear variables, just ensure functions are ready
   reset(soft = false) {
     if (!soft) {
         this.globalVariables.clear();
@@ -181,11 +180,11 @@ export class KefirInterpreter {
 
   // --- EVALUATE (With REPL support) ---
   async evaluate(source: string, onLog: (entry: LogEntry) => void, replMode = false) {
-    this.reset(replMode); // Soft reset for REPL (keep vars)
+    this.reset(replMode); 
     const tokens = tokenize(source);
     let i = 0;
-    const peek = (offset = 0) => tokens[i + offset] || { value: '', type: 'EOF' };
-    const consume = () => tokens[i++];
+    
+    // Removed unused 'peek' and 'consume' from here to fix TS6133
 
     // Pass 1: Hoisting
     while (i < tokens.length) {
@@ -221,7 +220,6 @@ export class KefirInterpreter {
 
     // Pass 2: Execution
     if (!replMode) {
-        // Normal File Mode: Look for _main entry
         let entryLabel = '_main'; 
         i = 0;
         while(i < tokens.length) {
@@ -235,23 +233,20 @@ export class KefirInterpreter {
             i++;
         }
         if (startIndex !== -1) {
-            const mainBody = this.captureBlock(tokens, startIndex, (n) => {});
+            // Fixed TS6133: Changed (n) to (_) to indicate unused parameter
+            const mainBody = this.captureBlock(tokens, startIndex, (_) => {});
             await this.executeBlock(mainBody, onLog);
         } else {
             onLog({ type: 'error', message: `Entry point '${entryLabel}' not found.` });
         }
     } else {
-        // REPL Mode: Execute everything top-to-bottom as statements
+        // REPL Mode
         i = 0;
         while(i < tokens.length) {
-            // Skip definitions we already hoisted
             if (['struct', 'def', 'defn'].includes(tokens[i].value)) {
-                // simple skip heuristic
                 while(tokens[i].type !== 'EOF') {
                     if (tokens[i].value === 'struct' && tokens[i].value === '}') { i++; break; }
                     if (['def','defn'].includes(tokens[i].value) && tokens[i].value === ':;') { i++; break; }
-                    // Actually, hoisting logic consumed them safely, but here we iterate tokens again.
-                    // Ideally we remove them from stream, but for now we skip known def start tokens
                     if (tokens[i].value === ':;' || tokens[i].value === '}') { i++; break; } 
                     i++;
                 }
@@ -271,9 +266,8 @@ export class KefirInterpreter {
       const peek = (offset = 0) => tokens[i + offset] || { value: '', type: 'EOF' };
       const consume = () => tokens[i++];
 
-      // Definitions skip (already hoisted)
+      // Definitions skip 
       if (['struct', 'def', 'defn'].includes(token.value)) {
-          // Just advance index past the block
           if (token.value === 'struct') {
               while(peek().value !== '}' && peek().type !== 'EOF') consume();
               consume();
@@ -627,7 +621,8 @@ export class KefirInterpreter {
             const structName = token.value;
             const def = this.structs.get(structName)!;
             i += 2; 
-            const args = [];
+            // Fixed TS7034 & TS7005: Explicitly type args
+            const args: any[] = [];
             while(tokens[i].value !== ')' && tokens[i].type !== 'EOF') {
                 if (tokens[i].value === ',') { i++; continue; }
                 args.push(await this.parseExpression(tokens, i, (n) => i = n, onLog));
