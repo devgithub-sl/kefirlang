@@ -1,0 +1,22 @@
+entry _main;
+
+_main:
+  // Test While Loop
+  mut count = 0;
+  while count < 3:
+    print("Loop count:", count);
+    count = count + 1;
+  :;
+
+  // Test Else
+  if count == 10:
+    print("This won't print");
+  :;
+  else:
+    print("Else block working! Count is actually:", count);
+  :;
+
+  // Test Input (Browser will show a prompt)
+  name = input("Enter your name:");
+  print("Hello,", name);
+:;

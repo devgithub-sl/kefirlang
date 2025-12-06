@@ -1,0 +1,31 @@
+entry _main;
+
+_main:
+  // 1. Implicit Immutable Declaration
+  x = 10;
+  print("x is:", x);
+  
+  // This should FAIL (Error in log) because x is immutable
+  x = 20; 
+  
+  // 2. Explicit Mutable Declaration
+  mut y = 100;
+  print("y is:", y);
+  
+  // This should WORK because y is mutable
+  y = 200; 
+  print("y is now:", y);
+
+  // 3. Loop Counter (Must be mutable!)
+  mut count = 0;
+  while count < 3:
+     print("Looping:", count);
+     count = count + 1;
+  :;
+
+  // 4. Redeclaration (Shadowing)
+  let z = 5;
+  print("z:", z);
+  let z = "Changed Type!";
+  print("z:", z);
+:;

@@ -1,0 +1,29 @@
+entry _main;
+
+_main:
+  // 1. Dictionaries
+  print("--- Dictionaries ---");
+  mut user = { name: "Kefir", level: 1 };
+  print("User:", user);
+  
+  // Access & Mutation
+  print("Name is " + user["name"]);
+  user["level"] = 99;
+  print("Level Up:", user);
+
+  // 2. Break & Continue
+  print("--- Flow Control ---");
+  for i in range(0, 10):
+      if i == 2:
+         print("Skipping 2...");
+         continue; 
+      :;
+      
+      if i > 5:
+         print("Breaking at 6!");
+         break;
+      :;
+      
+      print("Loop:", i);
+  :;
+:;

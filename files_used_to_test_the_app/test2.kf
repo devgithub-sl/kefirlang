@@ -1,0 +1,26 @@
+entry _main;
+
+defn is1(x):
+    return x
+
+_main:
+  // Math
+  x = 10;
+  y = 5;
+  sum = x + y;
+  print("Sum is:", sum);
+  x = is1('s')
+
+  // Logic & If Statement
+  if sum > 10:
+    print("The sum is greater than 10!");
+  :;
+
+  if sum == 5:
+    print("This should not print.");
+  :;
+
+  // Complex Math
+  val = x * 2 + 5;
+  print("Complex result:", val);
+:;

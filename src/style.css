@@ -1,0 +1,143 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  background-color: #242424;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.container {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  height: 90vh;
+}
+
+.panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  padding: 20px;
+  border-radius: 8px;
+  min-width: 400px;
+  position: relative;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+textarea {
+  flex: 1;
+  background: #000;
+  color: #0f0;
+  font-family: monospace;
+  border: 1px solid #333;
+  padding: 10px;
+  margin-bottom: 10px;
+  resize: none;
+}
+
+#console-output {
+  flex: 1;
+  background: #111;
+  border: 1px solid #333;
+  padding: 10px;
+  overflow-y: auto;
+  font-family: monospace;
+  margin-bottom: 10px;
+}
+
+.repl-input-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#repl-input {
+    flex: 1;
+    background: #000;
+    color: #fff;
+    border: 1px solid #444;
+    padding: 8px;
+    font-family: monospace;
+}
+
+.log-msg { color: #ccc; padding: 2px 0; border-bottom: 1px solid #222; }
+.log-error { color: #ff4d4d; background: rgba(255,0,0,0.1); padding: 4px; border-left: 3px solid red; }
+
+button {
+  background: #646cff;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+button:disabled { background: #444; cursor: not-allowed; }
+
+.secondary-btn {
+  background: #444;
+  margin-top: 0;
+  padding: 5px 10px;
+  font-size: 0.9em;
+}
+.secondary-btn:hover { background: #555; }
+
+/* --- MODAL STYLES --- */
+.hidden { display: none !important; }
+
+.modal {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #1e1e1e;
+  padding: 20px;
+  border-radius: 8px;
+  width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #333;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+
+.modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.guide-content h3 {
+  margin-top: 20px;
+  color: #646cff;
+  border-bottom: 1px solid #333;
+  padding-bottom: 5px;
+}
+
+.guide-content pre {
+  background: #111;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #333;
+  overflow-x: auto;
+  font-family: monospace;
+  color: #ce9178; /* VS Code String color style */
+}

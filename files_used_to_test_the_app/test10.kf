@@ -1,0 +1,71 @@
+entry _main;
+
+_main:
+  // 1. String Interpolation (New!)
+  print("--- 1. String Interpolation ---");
+  mut name = "Kefir";
+  mut level = 99;
+  // Variables inside strings with $
+  print("Player $name is level $level.");
+
+
+  // 2. Match Statement (Switch)
+  print("--- 2. Match Statement ---");
+  for i in range(0, 4):
+      match i:
+          case 0: 
+              print("Found Zero"); 
+          :;
+          case 1: 
+              print("Found One"); 
+          :;
+          case 2: 
+              print("Found Two"); 
+          :;
+          default: 
+              print("Found Something else: $i"); 
+          :;
+      :;
+  :;
+
+
+  // 3. Native StdLib (push, pop, len, keys)
+  print("--- 3. StdLib Utils ---");
+  mut backpack = ["Sword", "Shield"];
+  
+  push(backpack, "Potion");
+  print("Backpack after push:", backpack);
+  
+  mut item = pop(backpack);
+  print("Popped item:", item);
+  print("Remaining:", backpack);
+  print("Count:", len(backpack));
+
+  mut stats = { hp: 100, mp: 50 };
+  print("Stat Keys:", keys(stats));
+
+
+  // 4. Robustness Checks (Safety)
+  print("--- 4. Safety Checks ---");
+  
+  // A. Type Safety in Math (Prevents NaN poisoning)
+  // The interpreter will log a RED warning for this, but continue running.
+  mut safe_calc = 10 / "invalid"; 
+  print("Result of invalid math is safe:", safe_calc);
+
+  // B. Arity Check (Wrong number of arguments)
+  // The interpreter will log a RED error for this line.
+  push(backpack); 
+
+  
+  // 5. HTML DSL with Interpolation
+  print("--- 5. HTML Injection ---");
+  mut title = "User Dashboard";
+  mut html_out = html {
+      div {
+          h1 $title
+          p "Welcome, $name"
+      }
+  };
+  print(html_out);
+:;

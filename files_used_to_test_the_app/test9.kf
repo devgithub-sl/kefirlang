@@ -1,0 +1,49 @@
+entry _main;
+
+// Struct & Operator Overloading
+struct Vector { x, y }
+
+// Define overloading function: StructName__op
+defn Vector__add(v1, v2):
+    return Vector(v1.x + v2.x, v1.y + v2.y)
+
+_main:
+  // 1. Structs & Overloading
+  mut v1 = Vector(1, 2);
+  mut v2 = Vector(3, 4);
+  mut v3 = v1 + v2; // Calls Vector__add
+  print("Vector Addition:", v3);
+
+  // 2. Defer
+  print("--- Defer Test ---");
+  defer print("First defer (runs last)");
+  defer {
+      print("Second defer block");
+      print("Cleaning up resources...");
+  }
+  print("Main logic running...");
+
+  // 3. Optionals (Null Coalescing & Chaining)
+  print("--- Optionals ---");
+  mut nothing = null;
+  print("Value is:", nothing ?? "Default Value");
+  
+  mut obj = { nested: { val: 42 } };
+  print("Chain:", obj?.nested?.val);
+  // print("Broken Chain:", obj?.missing?.val); // Returns null, no crash
+
+  // 4. HTML DSL
+  print("--- HTML Gen ---");
+  mut name = "User";
+  mut view = html {
+      div {
+          h1 "Welcome"
+          span $name
+          p "This is generated HTML"
+          h6 "this is a Test"
+      }
+  };
+  print(view);
+
+  
+:;

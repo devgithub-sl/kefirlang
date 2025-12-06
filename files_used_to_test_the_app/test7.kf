@@ -1,0 +1,22 @@
+entry _main;
+
+_main:
+  // 1. Range & For Loops
+  print("Counting to 5:");
+  // range(start, end) is a native function now!
+  for i in range(0, 5):
+      print("Number:", i);
+  :;
+
+  // 2. String Concatenation & Native Math
+  print("Calculations:");
+  mut r = floor(random() * 100);
+  print("Random integer: " + str(r));
+  print("Square root of 16 is: " + str(sqrt(16)));
+
+  // 3. Iterating Strings
+  print("Spelling 'Kefir':");
+  for char in "Kefir":
+     print(char);
+  :;
+:;

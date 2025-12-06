@@ -1,0 +1,44 @@
+// declaration of entry point
+entry _main;
+
+// integer
+mut x=10;
+
+// string
+y="hallo";
+
+// character
+z='t';
+
+// boolean
+o=True;
+
+// float
+b=4.4;
+
+// function is dynamically typed
+// the word is is used to tell the interpretter the datatype for example here
+// isTrue is telling the interpretter the function parameters expects only boolean values any values and it fails
+defn isTrue(x):
+  return x
+
+// this function only takes string parameters as shown with the 
+// "string" brackets
+// this function also returns multiple data types
+// actually every function can do this 
+// but the max is only upto five
+def is"string"(v):
+  return v, "hallo"
+
+// start of entry point scope
+_main:
+  print(x);
+  print(y[3]);
+  print(y[7]); // should fail tell the interpretter to show this as a red line but shouldnt fail the entire program
+  u=y.len(); // property of a string to return the length of the entire string characters
+  io=isTrue(0);
+  io2=isTrue(o);
+  // print function can take multiple arguments of any data type
+  print(io, io2); 
+// end of scope
+:; 
