@@ -81,7 +81,7 @@ export function tokenize(source: string): Token[] {
     }
 
     const twoChar = source.substr(cursor, 2);
-    if ([':;', '==', '!=', '>=', '<=', '&&', '||', '??', '?.'].includes(twoChar)) {
+    if ([':;', '==', '!=', '>=', '<=', '&&', '||', '??', '?.', '->'].includes(twoChar)) {
         if ([':;'].includes(twoChar)) tokens.push({ type: 'PUNCTUATION', value: twoChar, line });
         else tokens.push({ type: 'OPERATOR', value: twoChar, line });
         cursor += 2;

@@ -1,25 +1,32 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  background-color: #242424;
-  color: rgba(255, 255, 255, 0.87);
+  font-family: 'Fira Code', 'Consolas', monospace;
+  background-color: #1e1e1e;
+  color: #d4d4d4;
 }
+
+body { margin: 0; padding: 0; overflow: hidden; }
 
 .container {
   display: flex;
   gap: 20px;
   padding: 20px;
-  height: 90vh;
+  height: 100vh;
+  box-sizing: border-box;
 }
 
 .panel {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #1a1a1a;
+  background: #252526;
   padding: 20px;
   border-radius: 8px;
   min-width: 400px;
-  position: relative;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.repl-panel {
+    border: 1px solid #3c3c3c;
 }
 
 .header-row {
@@ -29,115 +36,107 @@
   margin-bottom: 10px;
 }
 
+h2 { margin: 0 0 10px 0; color: #9cdcfe; font-size: 1.1rem; }
+
 textarea {
   flex: 1;
-  background: #000;
-  color: #0f0;
-  font-family: monospace;
-  border: 1px solid #333;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #3c3c3c;
+  font-family: inherit;
   padding: 10px;
-  margin-bottom: 10px;
+  border-radius: 4px;
   resize: none;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-#console-output {
+.terminal {
   flex: 1;
-  background: #111;
-  border: 1px solid #333;
+  background: #1e1e1e;
   padding: 10px;
   overflow-y: auto;
-  font-family: monospace;
-  margin-bottom: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  margin-bottom: 5px;
+  cursor: text;
 }
 
 .repl-input-container {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    background: #1e1e1e;
+    padding: 8px;
+    border-top: 1px solid #333;
+}
+
+#prompt-label {
+    color: #569cd6;
+    font-weight: bold;
 }
 
 #repl-input {
     flex: 1;
-    background: #000;
-    color: #fff;
-    border: 1px solid #444;
-    padding: 8px;
-    font-family: monospace;
+    background: transparent;
+    color: #d4d4d4;
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 14px;
 }
 
-.log-msg { color: #ccc; padding: 2px 0; border-bottom: 1px solid #222; }
-.log-error { color: #ff4d4d; background: rgba(255,0,0,0.1); padding: 4px; border-left: 3px solid red; }
+.log-input { color: #888; margin-top: 4px; }
+.log-msg { color: #ce9178; margin-bottom: 2px; white-space: pre-wrap; }
+.log-error { color: #f48771; padding: 4px 0; margin-bottom: 4px; border-bottom: 1px solid #f48771; }
 
 button {
-  background: #646cff;
+  background: #0e639c;
   color: white;
   border: none;
-  padding: 10px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  border-radius: 2px;
   cursor: pointer;
-  margin-top: 10px;
-}
-button:disabled { background: #444; cursor: not-allowed; }
-
-.secondary-btn {
-  background: #444;
-  margin-top: 0;
-  padding: 5px 10px;
   font-size: 0.9em;
 }
-.secondary-btn:hover { background: #555; }
+button:hover { background: #1177bb; }
+button:disabled { background: #3a3d41; cursor: wait; }
 
-/* --- MODAL STYLES --- */
+.secondary-btn { background: #3c3c3c; }
+.secondary-btn:hover { background: #444; }
+
 .hidden { display: none !important; }
-
 .modal {
   position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 9999;
 }
-
 .modal-content {
-  background: #1e1e1e;
+  background: #252526;
   padding: 20px;
   border-radius: 8px;
-  width: 600px;
-  max-height: 80vh;
+  width: 650px;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  color: #d4d4d4;
+  border: 1px solid #444;
 }
-
 .modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #333;
-  padding-bottom: 10px;
-  margin-bottom: 10px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3c3c3c; padding-bottom: 10px; margin-bottom: 10px;
 }
+.modal-body { overflow-y: auto; flex: 1; padding-right: 10px; }
 
-.modal-body {
-  overflow-y: auto;
-  flex: 1;
-}
-
-.guide-content h3 {
-  margin-top: 20px;
-  color: #646cff;
-  border-bottom: 1px solid #333;
-  padding-bottom: 5px;
-}
-
+.guide-content h3 { color: #4ec9b0; border-bottom: 1px solid #3c3c3c; padding-bottom: 5px; margin-top: 20px; }
 .guide-content pre {
-  background: #111;
+  background: #1e1e1e;
   padding: 10px;
-  border-radius: 4px;
-  border: 1px solid #333;
+  border: 1px solid #3c3c3c;
   overflow-x: auto;
-  font-family: monospace;
-  color: #ce9178; /* VS Code String color style */
+  color: #9cdcfe;
 }

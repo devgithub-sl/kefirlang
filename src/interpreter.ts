@@ -8,22 +8,24 @@ export interface LogEntry {
 
 interface FunctionDef {
   name: string;
-  params: string[];
+  params: { name: string, type: string | null }[]; 
   body: Token[]; 
+  returnType: string | null;
 }
 
 interface StructDef {
     name: string;
-    fields: string[];
+    fields: { name: string, type: string | null }[];
 }
 
 interface Variable {
     value: any;
     isMutable: boolean;
+    type: string | null;
 }
 
 type NativeFunction = (args: any[]) => any;
-type ExecutionSignal = { type: 'return' | 'break' | 'continue', value?: any };
+type ExecutionSignal = { type: 'return' | 'break' | 'continue' | 'expression_result', value?: any };
 
 export class KefirInterpreter {
   private globalVariables: Map<string, Variable> = new Map();
@@ -95,18 +97,25 @@ export class KefirInterpreter {
     return undefined;
   }
 
-  private defineVar(name: string, val: any, isMutable: boolean) {
+  private defineVar(name: string, val: any, isMutable: boolean, type: string | null) {
     const currentScope = this.scopeStack[this.scopeStack.length - 1];
-    currentScope.set(name, { value: val, isMutable });
+    currentScope.set(name, { value: val, isMutable, type });
   }
 
   private assignVar(name: string, val: any, line: number, logCallback: (l: LogEntry) => void) {
     const variable = this.getVar(name);
     if (variable) {
-        if (variable.isMutable) variable.value = val;
-        else logCallback({ type: 'error', message: `Runtime Error: Cannot reassign immutable variable '${name}'`, line });
+        if (!variable.isMutable) {
+            logCallback({ type: 'error', message: `Runtime Error: Cannot reassign immutable variable '${name}'`, line });
+            return;
+        }
+        if (variable.type && !this.checkType(val, variable.type)) {
+            logCallback({ type: 'error', message: `Type Error: Variable '${name}' expects '${variable.type}'`, line });
+            return;
+        }
+        variable.value = val;
     } else {
-        this.defineVar(name, val, false); 
+        this.defineVar(name, val, false, null); 
     }
   }
 
@@ -133,7 +142,26 @@ export class KefirInterpreter {
       }
   }
 
-  // --- HELPER: Execute Block ---
+  private checkType(val: any, typeName: string): boolean {
+      if (typeName === 'any') return true;
+      switch (typeName) {
+          case 'int': 
+          case 'float':
+          case 'number': return typeof val === 'number';
+          case 'string': return typeof val === 'string';
+          case 'bool':
+          case 'boolean': return typeof val === 'boolean';
+          case 'array': return Array.isArray(val);
+          case 'object':
+          case 'dict': return typeof val === 'object' && val !== null && !Array.isArray(val);
+          default: 
+              if (this.structs.has(typeName)) {
+                  return typeof val === 'object' && val !== null && val.__struct_type === typeName;
+              }
+              return true; 
+      }
+  }
+
   private async executeBlock(tokens: Token[], onLog: (l: LogEntry) => void): Promise<number | ExecutionSignal> {
       let idx = 0;
       const deferStack: Token[][] = []; 
@@ -164,6 +192,7 @@ export class KefirInterpreter {
               }
 
               const result = await this.executeStatement(tokens, idx, onLog);
+              
               if (typeof result === 'object' && 'type' in result) {
                   return result; 
               }
@@ -178,24 +207,29 @@ export class KefirInterpreter {
       return idx;
   }
 
-  // --- EVALUATE (With REPL support) ---
   async evaluate(source: string, onLog: (entry: LogEntry) => void, replMode = false) {
     this.reset(replMode); 
     const tokens = tokenize(source);
     let i = 0;
     
-    // Removed unused 'peek' and 'consume' from here to fix TS6133
-
     // Pass 1: Hoisting
     while (i < tokens.length) {
         const token = tokens[i];
         if (token.value === 'struct') {
             i++; const structName = tokens[i].value; i++; 
             if(tokens[i].value === '{') i++; 
-            const fields: string[] = [];
+            const fields: {name: string, type: string|null}[] = [];
             while(tokens[i].value !== '}' && tokens[i].type !== 'EOF') {
-                if (tokens[i].type === 'IDENTIFIER') fields.push(tokens[i].value);
-                i++;
+                if (tokens[i].type === 'IDENTIFIER') {
+                    const fieldName = tokens[i++].value;
+                    let fieldType = null;
+                    if (tokens[i].value === ':') {
+                        i++; fieldType = tokens[i++].value; if (tokens[i].value === ':') i++;
+                    }
+                    fields.push({name: fieldName, type: fieldType});
+                } else {
+                    i++;
+                }
             }
             if (tokens[i].value === '}') i++;
             this.structs.set(structName, { name: structName, fields });
@@ -204,15 +238,29 @@ export class KefirInterpreter {
         if (token.value === 'def' || token.value === 'defn') {
             i++; const funcName = tokens[i].value; i++; 
             if(tokens[i].value === '(') i++; 
-            const params: string[] = [];
+            const params: {name: string, type: string|null}[] = [];
             while (tokens[i].value !== ')' && tokens[i].type !== 'EOF') {
-                if (tokens[i].value === ',') i++; else params.push(tokens[i++].value);
+                if (tokens[i].value === ',') { i++; continue; }
+                const paramName = tokens[i++].value;
+                let paramType = null;
+                if (tokens[i].value === ':') {
+                    i++; paramType = tokens[i++].value; if (tokens[i].value === ':') i++;
+                }
+                params.push({ name: paramName, type: paramType });
             }
             if(tokens[i].value === ')') i++; 
+            
+            let returnType = null;
+            if (tokens[i].value === '->') {
+                i++; if (tokens[i].value === ':') i++;
+                returnType = tokens[i++].value;
+                if (tokens[i].value === ':') i++;
+            }
+
             if(tokens[i].value === ':') i++; 
             const bodyTokens = this.captureBlock(tokens, i, (n) => i = n);
             if (tokens[i] && tokens[i].value === ':;') i++;
-            this.functions.set(funcName, { name: funcName, params, body: bodyTokens });
+            this.functions.set(funcName, { name: funcName, params, returnType, body: bodyTokens });
             continue;
         }
         i++;
@@ -233,14 +281,12 @@ export class KefirInterpreter {
             i++;
         }
         if (startIndex !== -1) {
-            // Fixed TS6133: Changed (n) to (_) to indicate unused parameter
             const mainBody = this.captureBlock(tokens, startIndex, (_) => {});
             await this.executeBlock(mainBody, onLog);
         } else {
             onLog({ type: 'error', message: `Entry point '${entryLabel}' not found.` });
         }
     } else {
-        // REPL Mode
         i = 0;
         while(i < tokens.length) {
             if (['struct', 'def', 'defn'].includes(tokens[i].value)) {
@@ -253,8 +299,26 @@ export class KefirInterpreter {
                 continue; 
             }
             const res = await this.executeStatement(tokens, i, onLog);
-            if (typeof res === 'object') break;
-            i = res;
+            if (typeof res === 'object') {
+                if (res.type === 'expression_result' && res.value !== undefined) {
+                    const format = (a: any): string => {
+                        if (Array.isArray(a)) return `[${a.map(format).join(', ')}]`;
+                        if (typeof a === 'object' && a !== null) {
+                            if (a.__struct_type) {
+                                const keys = Object.keys(a).filter(k => k !== '__struct_type');
+                                return `${a.__struct_type} { ${keys.map(k => `${k}: ${format(a[k])}`).join(', ')} }`;
+                            }
+                            return JSON.stringify(a);
+                        }
+                        return String(a);
+                    }
+                    onLog({ type: 'output', message: `=> ${format(res.value)}` });
+                }
+                if (res.type !== 'expression_result') break; 
+                i = tokens.findIndex((t, index) => index >= i && t.value === ';') + 1;
+            } else {
+                i = res as number;
+            }
         }
     }
   }
@@ -266,7 +330,6 @@ export class KefirInterpreter {
       const peek = (offset = 0) => tokens[i + offset] || { value: '', type: 'EOF' };
       const consume = () => tokens[i++];
 
-      // Definitions skip 
       if (['struct', 'def', 'defn'].includes(token.value)) {
           if (token.value === 'struct') {
               while(peek().value !== '}' && peek().type !== 'EOF') consume();
@@ -281,9 +344,18 @@ export class KefirInterpreter {
       if (token.value === 'mut' || token.value === 'let') {
           const isMutable = token.value === 'mut';
           consume(); const varName = consume().value; consume(); 
+          let declaredType = null;
+          if (peek().value === ':') {
+              consume(); declaredType = consume().value; if (peek().value === ':') consume();
+          }
+          if (peek().value === '=') consume();
           const val = await this.parseExpression(tokens, i, (n) => i = n, onLog);
           if (peek().value === ';') consume();
-          this.defineVar(varName, val, isMutable);
+          
+          if (declaredType && !this.checkType(val, declaredType)) {
+              onLog({ type: 'error', message: `Type Error: Variable '${varName}' declared as '${declaredType}' but got ${typeof val}`, line: token.line });
+          }
+          this.defineVar(varName, val, isMutable, declaredType);
           return i;
       }
 
@@ -399,7 +471,7 @@ export class KefirInterpreter {
           if (Array.isArray(iterable) || typeof iterable === 'string') {
              for (const item of iterable) {
                  const loopScope = new Map<string, Variable>();
-                 loopScope.set(loopVar, { value: item, isMutable: false });
+                 loopScope.set(loopVar, { value: item, isMutable: false, type: null });
                  this.scopeStack.push(loopScope);
                  const res = await this.executeBlock(loopBody, onLog);
                  this.scopeStack.pop();
@@ -415,7 +487,7 @@ export class KefirInterpreter {
 
       if (token.value === 'print') {
         consume(); consume(); 
-        const args = [];
+        const args: any[] = [];
         while(peek().value !== ')' && peek().type !== 'EOF') {
            if (peek().value === ',') { consume(); continue; }
            args.push(await this.parseExpression(tokens, i, (n) => i = n, onLog));
@@ -439,7 +511,7 @@ export class KefirInterpreter {
 
       if (token.value === 'return') {
          consume();
-         const returns = [];
+         const returns: any[] = [];
          while (peek().type !== 'EOF' && !['def','defn','_main',':;'].includes(peek().value)) {
              returns.push(await this.parseExpression(tokens, i, (n) => i = n, onLog));
              if (peek().value === ',') consume(); else break;
@@ -449,10 +521,18 @@ export class KefirInterpreter {
       if (token.value === 'break') { consume(); if(peek().value === ';') consume(); return { type: 'break' }; }
       if (token.value === 'continue') { consume(); if(peek().value === ';') consume(); return { type: 'continue' }; }
 
-      consume();
-      return i;
+      const expressionValue = await this.parseExpression(tokens, i, (n) => i = n, onLog);
+      
+      if (peek().value === ';') consume();
+      
+      if (expressionValue !== undefined && expressionValue !== null) {
+          return { type: 'expression_result', value: expressionValue };
+      }
+      
+      return i; 
   }
 
+  // ... (HTML, CaptureBlock, ParseExpression, ParseTerm, CallFunction same as previous robust version)
   private async parseHtmlBlock(tokens: Token[], startIndex: number, advance: (i: number) => void, onLog: (l: LogEntry) => void): Promise<string> {
       let i = startIndex;
       const safePeek = (offset=0) => tokens[i+offset] || {value:'', type:'EOF'};
@@ -588,7 +668,7 @@ export class KefirInterpreter {
     }
 
     if (token.value === '[') {
-        i++; const elements = [];
+        i++; const elements: any[] = [];
         while(tokens[i].value !== ']' && tokens[i].type !== 'EOF') {
             if (tokens[i].value === ',') { i++; continue; }
             elements.push(await this.parseExpression(tokens, i, (n) => i = n, onLog));
@@ -621,7 +701,6 @@ export class KefirInterpreter {
             const structName = token.value;
             const def = this.structs.get(structName)!;
             i += 2; 
-            // Fixed TS7034 & TS7005: Explicitly type args
             const args: any[] = [];
             while(tokens[i].value !== ')' && tokens[i].type !== 'EOF') {
                 if (tokens[i].value === ',') { i++; continue; }
@@ -632,12 +711,17 @@ export class KefirInterpreter {
                 onLog({ type: 'error', message: `Struct '${structName}' expects ${def.fields.length} arguments, got ${args.length}`, line: token.line });
             }
             const instance: any = { __struct_type: structName };
-            def.fields.forEach((f, idx) => instance[f] = args[idx]);
+            def.fields.forEach((f, idx) => {
+                if (f.type && !this.checkType(args[idx], f.type)) {
+                    onLog({ type: 'error', message: `Type Error: Struct '${structName}' field '${f.name}' expects '${f.type}'`, line: token.line });
+                }
+                instance[f.name] = args[idx];
+            });
             return done(instance, 0);
         }
         if (next && next.value === '(') {
             const funcName = token.value; i += 2; 
-            const args = [];
+            const args: any[] = [];
             while(tokens[i].value !== ')' && tokens[i].type !== 'EOF') {
                 if (tokens[i].value === ',') { i++; continue; }
                 args.push(await this.parseExpression(tokens, i, (n) => i = n, onLog));
@@ -697,16 +781,28 @@ export class KefirInterpreter {
       if (args.length !== func.params.length) {
           onLog({ type: 'error', message: `Function '${name}' expects ${func.params.length} arguments, got ${args.length}`, line });
       }
+      const localScope = new Map<string, Variable>();
+      func.params.forEach((p, idx) => {
+          if (p.type) {
+              if (!this.checkType(args[idx], p.type)) {
+                  onLog({ type: 'error', message: `Type Error: Argument '${p.name}' expects type '${p.type}'`, line });
+              }
+          }
+          localScope.set(p.name, { value: args[idx], isMutable: false, type: p.type });
+      });
       if (name.startsWith('is')) {
           if (name.includes('True') && typeof args[0] !== 'boolean') onLog({ type: 'error', message: `Type Error: '${name}' expects Boolean`, line });
           if (name.includes('"string"') && typeof args[0] !== 'string') onLog({ type: 'error', message: `Type Error: '${name}' expects String`, line });
       }
-      const localScope = new Map<string, Variable>();
-      func.params.forEach((p, idx) => localScope.set(p, { value: args[idx], isMutable: false }));
       this.scopeStack.push(localScope);
       const result = await this.executeBlock(func.body, onLog);
       this.scopeStack.pop();
-      if (typeof result === 'object' && result.type === 'return') return result.value;
+      if (typeof result === 'object' && result.type === 'return') {
+          if (func.returnType && !this.checkType(result.value, func.returnType)) {
+              onLog({ type: 'error', message: `Type Error: Function '${name}' returned '${typeof result.value}' but expected '${func.returnType}'`, line });
+          }
+          return result.value;
+      }
       return null;
   }
 }
