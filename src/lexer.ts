@@ -10,7 +10,7 @@ export interface Token {
 
 const KEYWORDS = new Set([
   'entry', 'def', 'defn', 'return', 'print',
-  'if', 'else', 'while', 'for', 'in', 'input',
+  'if', 'else', 'while', 'for', 'in',
   'mut', 'let', 'const', 'enum', 'break', 'continue',
   'struct', 'defer', 'html',
   'match', 'case', 'default'
