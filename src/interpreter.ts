@@ -51,6 +51,17 @@ export class KefirInterpreter {
 
     private initNativeFunctions() {
         this.nativeFunctions.clear();
+        this.nativeFunctions.set('fetch', async (args) => {
+            try {
+                const response = await fetch(args[0]);
+                const text = await response.text();
+                try { return JSON.parse(text); } catch { return text; }
+            } catch (e) { return null; }
+        });
+        this.nativeFunctions.set('sleep', async (args) => {
+            await new Promise(r => setTimeout(r, args[0]));
+            return true;
+        });
         this.nativeFunctions.set('range', (args) => {
             if (args.length < 2) return [];
             const start = args[0]; const end = args[1];
