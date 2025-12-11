@@ -1,10 +1,10 @@
 entry _main;
 
 // Struct & Operator Overloading
-struct Vector { x, y }
+struct Vector { x :any:, y :any: }
 
 // Define overloading function: StructName__op
-defn Vector__add(v1, v2):
+defn Vector__add(v1 :any:, v2 :any:) -> :any::
     return Vector(v1.x + v2.x, v1.y + v2.y)
 
 _main:

@@ -1,10 +1,10 @@
 entry _main;
 
-defn sub(x :int:, y :int:):
+defn sub(x :int:, y :int:) -> :int::
     return x - y
 
 _main:
     mut y = sub(10, 2);
-    print("this is the result of y", y)'
+    print("this is the result of y", y)
 :;
 

@@ -2,7 +2,7 @@ entry _main;
 
 _main:
   // 1. Implicit Immutable Declaration
-  x = 10;
+  const x = 10;
   print("x is:", x);
   
   // This should FAIL (Error in log) because x is immutable

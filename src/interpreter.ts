@@ -47,9 +47,15 @@ export class KefirInterpreter {
     private opCounter = 0;
     private readonly YIELD_THRESHOLD = 20000; // Run 20,000 ops before yielding
 
+    private inputHandler: ((text: string) => Promise<string | null>) | null = null;
+
     constructor() {
         this.initNativeFunctions();
         this.scopeStack = [this.globalVariables];
+    }
+
+    setInputHandler(handler: (text: string) => Promise<string | null>) {
+        this.inputHandler = handler;
     }
 
     reset(soft = false) {
@@ -134,6 +140,28 @@ export class KefirInterpreter {
             if (typeof args[0] === 'object' && args[0] !== null) return Object.keys(args[0]);
             return [];
         });
+        this.nativeFunctions.set('input', async (args) => {
+            if (this.inputHandler) {
+                return await this.inputHandler(args[0] || "");
+            }
+            try {
+                // @ts-ignore
+                if (typeof prompt === 'function') return prompt(args[0] || "");
+            } catch (e) { }
+            return "Test Input";
+        });
+    }
+
+    private formatValue(a: any): string {
+        if (Array.isArray(a)) return `[${a.map((v: any) => this.formatValue(v)).join(', ')}]`;
+        if (typeof a === 'object' && a !== null) {
+            if (a.__struct_type) {
+                const keys = Object.keys(a).filter(k => k !== '__struct_type');
+                return `${a.__struct_type} { ${keys.map(k => `${k}: ${this.formatValue(a[k])}`).join(', ')} }`;
+            }
+            return JSON.stringify(a);
+        }
+        return String(a);
     }
 
     private getVar(name: string): Variable | undefined {
@@ -406,12 +434,22 @@ export class KefirInterpreter {
                 i++;
             }
 
+            // Find where the entry label is defined (e.g. "_main:")
+            let entryLabelIndex = -1;
+            for (let j = 0; j < tokens.length; j++) {
+                if (tokens[j].value === entryLabel && tokens[j + 1]?.value === ':') {
+                    entryLabelIndex = j;
+                    break;
+                }
+            }
+
             // Global Initialization (Pass 1.5)
-            // Execute top-level statements until 'entry' keyword
-            // Global Initialization (Pass 1.5)
-            // Execute top-level statements across the whole file to hoist globals
+            // Execute top-level statements until the entry point label.
+            // This prevents executing the main logic twice if it's top-level under the label.
             let globalI = 0;
-            while (globalI < tokens.length) {
+            const stopIndex = entryLabelIndex !== -1 ? entryLabelIndex : tokens.length;
+
+            while (globalI < stopIndex) {
                 // Skip 'entry' statement manually if seen
                 if (tokens[globalI].value === 'entry') {
                     globalI += 2; // skip 'entry' and label
@@ -426,7 +464,7 @@ export class KefirInterpreter {
                 if (res === globalI) globalI++; else globalI = res as number;
             }
 
-            let startIndex = -1;
+            let startIndex = entryLabelIndex !== -1 ? entryLabelIndex + 2 : -1;
             i = 0;
             while (i < tokens.length) {
                 if (tokens[i].value === entryLabel && tokens[i + 1]?.value === ':') { startIndex = i + 2; break; }
@@ -453,18 +491,7 @@ export class KefirInterpreter {
                 const res = await this.executeStatement(tokens, i, onLog);
                 if (typeof res === 'object') {
                     if (res.type === 'expression_result' && res.value !== undefined) {
-                        const format = (a: any): string => {
-                            if (Array.isArray(a)) return `[${a.map(format).join(', ')}]`;
-                            if (typeof a === 'object' && a !== null) {
-                                if (a.__struct_type) {
-                                    const keys = Object.keys(a).filter(k => k !== '__struct_type');
-                                    return `${a.__struct_type} { ${keys.map(k => `${k}: ${format(a[k])}`).join(', ')} }`;
-                                }
-                                return JSON.stringify(a);
-                            }
-                            return String(a);
-                        }
-                        onLog({ type: 'output', message: `=> ${format(res.value)}` });
+                        onLog({ type: 'output', message: `=> ${this.formatValue(res.value)}` });
                     }
                     if (res.type !== 'expression_result') break;
                     i = tokens.findIndex((t, index) => index >= i && t.value === ';') + 1;
@@ -866,11 +893,7 @@ export class KefirInterpreter {
         }
     }
 
-    private inputCallback: ((prompt: string) => Promise<string | null>) | null = null;
 
-    setInputHandler(handler: (prompt: string) => Promise<string | null>) {
-        this.inputCallback = handler;
-    }
 
     private opToName(op: string) {
         if (op === '+') return 'add';
@@ -888,9 +911,15 @@ export class KefirInterpreter {
 
         if (token.type === 'STRING') {
             let str = token.value;
-            str = str.replace(/\$([a-zA-Z_][a-zA-Z0-9_]*)/g, (match, name) => {
-                const val = this.getVar(name)?.value;
-                return val !== undefined ? String(val) : match;
+            // Support dot notation ex: $user.name.first
+            str = str.replace(/\$([a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*)/g, (match, path) => {
+                const parts = path.split('.');
+                let val = this.getVar(parts[0])?.value;
+                for (let k = 1; k < parts.length; k++) {
+                    if (val && typeof val === 'object') val = val[parts[k]];
+                    else { val = undefined; break; }
+                }
+                return val !== undefined ? this.formatValue(val) : match;
             });
             return done(str);
         }
@@ -928,26 +957,6 @@ export class KefirInterpreter {
         if (token.type === 'CHAR') return done(token.value);
         if (token.type === 'BOOLEAN') return done(token.value === 'True');
         if (token.type === 'IDENTIFIER' && token.value === 'null') return done(null);
-
-        if (token.value === 'input') {
-            const next = tokens[i + 1];
-            if (next && next.value === '(') {
-                i += 2; let promptText = "";
-                if (tokens[i].type === 'STRING') { promptText = tokens[i].value; i++; }
-                if (tokens[i].value === ')') i++;
-                await new Promise(resolve => setTimeout(resolve, 50));
-
-                let userInput: string | null = "";
-                if (this.inputCallback) {
-                    userInput = await this.inputCallback(promptText);
-                } else {
-                    userInput = prompt(promptText);
-                }
-
-                const num = parseFloat(userInput || "");
-                return done(!isNaN(num) ? num : userInput, 0);
-            }
-        }
 
         if (token.type === 'IDENTIFIER') {
             const next = tokens[i + 1];

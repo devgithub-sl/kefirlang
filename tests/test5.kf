@@ -2,6 +2,6 @@ entry _main;
 
 _main:
   print("This text should appear BEFORE the popup...");
-  name = input("Enter your name:");
+  mut name = input("Enter your name:");
   print("Hello,", name);
 :;
