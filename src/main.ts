@@ -3,115 +3,202 @@ import { KefirInterpreter, type LogEntry } from './interpreter';
 
 const interpreter = new KefirInterpreter();
 
-// --- EXPANDED SYNTAX GUIDE ---
+// --- 100% COMPREHENSIVE SYNTAX GUIDE ---
 const syntaxGuide = `
 <div class="guide-content">
-  <h3>1. Basics</h3>
-  <pre>entry _main;          // Entry point
+  <h3>1. Fundamentals</h3>
+  <pre>entry _main;          // Mark Entry Point
 _main:
   print("Hello Kefir");
+  // Comments start with //
+:;                    // End Block</pre>
+
+  <h3>2. Variables & Types</h3>
+  <pre>mut x :int: = 10;     // Mutable
+let y = "text";       // Immutable (Inferred)
+const PI = 3.14;      // Constant
+
+// Supported Types:
+// :int:, :float:, :bool:, :string:
+// :array:, :dict:</pre>
+  
+  <h3>3. Numbers & Math</h3>
+  <pre>a = 10 + 5 * 2;       // Standard Order
+b = sqrt(16);         // Native Math
+r = random();         // 0.0 to 1.0
+c = floor(3.9);       // 3</pre>
+
+  <h3>4. Logic & Control Flow</h3>
+  <pre>// IF ELSE
+if x > 5:
+  print("Big");
+else:
+  print("Small");
+:;
+
+// MATCH
+match x:
+  case 1: print("One"); :;
+  default: print("Other"); :;
+:;
+
+// LOOPS
+while x > 0:
+  x = x - 1;
+:;
+
+for i in range(0, 5):
+  print(i);
 :;</pre>
 
-  <h3>2. Variables (Typed)</h3>
-  <pre>x = 10;               // Immutable (Constant)
-mut y :int: = 20;     // Mutable with Type
-y = 25;               // OK
-let z = "text";       // Shadowing</pre>
-
-  <h3>3. Functions (Typed)</h3>
+  <h3>5. Functions</h3>
   <pre>defn add(a :int:, b :int:) -> :int::
   return a + b
+:;
 
-// Usage
-result = add(5, 10);</pre>
+// Short Syntax
+def greet(name): print("Hi " + name); :;</pre>
 
-  <h3>4. Structs</h3>
+  <h3>6. Arrays & Lists</h3>
+  <pre>mut list = [1, 2, 3];
+push(list, 4);        // Add
+val = pop(list);      // Remove Last
+len(list);            // Length
+rev = reverse(list);  // Reverse</pre>
+
+  <h3>7. Dictionaries (Objects)</h3>
+  <pre>mut user = { id: 1, name: "Kefir" };
+print(user["name"]);
+user["active"] = True;
+keys(user);           // ["id", "name", "active"]</pre>
+
+  <h3>8. Structs (OOP)</h3>
   <pre>struct User {
   name :string:,
   age :int:
+  
+  // Method
+  def greet():
+      print("I am " + self.name);
+  :;
 }
-mut u = User("Kefir", 25);
-print(u.name);</pre>
 
-  <h3>5. Data Structures</h3>
-  <pre>// Arrays
-mut arr = [1, 2, 3];
-push(arr, 4);
-print(arr[0]);
+// Instantiate
+u = User("Alice", 30);
+u.greet();</pre>
 
-// Dictionaries
-mut dict = { id: 1, type: "Admin" };
-print(dict["type"]);</pre>
+  <h3>9. Custom Initializer</h3>
+  <pre>struct Counter {
+  val :int:
+  
+  #init(start):
+      self.val = start;
+  :;
+}
+c = Counter(10);</pre>
 
-  <h3>6. Control Flow</h3>
-  <pre>if x > 10: print("Big"); :;
-match x:
-  case 10: print("Ten"); :;
-  default: print("Other"); :;
-:;
-while x > 0: x = x - 1; :;
-for i in range(0, 5): print(i); :;</pre>
+  <h3>10. Protocols (Interfaces)</h3>
+  <pre>protocol Printable {
+  def str() -> :string:
+}
 
-  <h3>7. Advanced</h3>
-  <pre>// String Interpolation
-print("Value: $x");
+struct Point implements Printable {
+  x, y
+  def str(): return "$x, $y"; :;
+}</pre>
 
-// HTML DSL
-view = html {
-  div { h1 "Title" }
-};
+  <h3>11. Input & Strings</h3>
+  <pre>// User Input
+name = input("Enter Name: ");
 
-// Defer
-defer print("Cleanup");</pre>
+// String Utils
+s = " hello ";
+trimmed = trim(s);
+upper = upper(s);
+contains(s, "ll");    // True
+split("a,b", ",");    // ["a", "b"]</pre>
+
+  <h3>12. HTML DSL (Web)</h3>
+  <pre>ui = html {
+  div {
+    h1 { "Welcome" }
+    button { "Click Me" }
+  }
+};</pre>
+
+  <h3>13. Advanced</h3>
+  <pre>// Defer: Run at end of block
+defer { print("Cleanup"); }
+
+// Fetch API
+data = fetch("https://api.example.com/data");
+
+// Sleep
+sleep(1000); // 1 second</pre>
 </div>
 `;
 
+// --- UI INJECTION ---
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div class="container">
+    <!-- GUIDE MODAL -->
     <div id="guide-modal" class="modal hidden">
       <div class="modal-content">
         <div class="modal-header">
-          <h2>Kefir Syntax Guide</h2>
+          <h2>📘 Kefir Language Guide</h2>
           <button id="close-guide">Close</button>
         </div>
         <div class="modal-body">${syntaxGuide}</div>
       </div>
     </div>
+    
+    <!-- INPUT MODAL -->
     <div id="input-modal" class="modal hidden">
       <div class="modal-content">
-        <h3 id="input-prompt">Input Required</h3>
-        <input type="text" id="custom-input-field" autocomplete="off" />
-        <button id="submit-input">Submit</button>
+        <div class="modal-header">
+            <h2 id="input-prompt">Input Required</h2>
+        </div>
+        <div class="modal-body">
+            <input type="text" id="custom-input-field" autocomplete="off" placeholder="Type here..." />
+            <button id="submit-input">Confirm Input</button>
+        </div>
       </div>
     </div>
 
+    <!-- LEFT PANEL: EDITOR -->
     <div class="panel">
       <div class="header-row">
-        <h2>1. Code File</h2>
-        <button id="guide-btn" class="secondary-btn">📘 Syntax Guide</button>
+        <h2>🧑‍💻 Source Code</h2>
+        <button id="guide-btn" class="secondary-btn">View Syntax</button>
       </div>
       <input type="file" id="kf-input" accept=".kf" />
-      <textarea id="code-preview" placeholder="Source code..." readonly></textarea>
-      <button id="run-btn">Run File</button>
+      <textarea id="code-preview" placeholder="// Write or load your Kefir code here..." spellcheck="false"></textarea>
+      <button id="run-btn">▶ Run Code</button>
     </div>
     
+    <!-- RIGHT PANEL: TERMINAL -->
     <div class="panel repl-panel">
-      <h2>2. Interactive REPL</h2>
+      <div class="header-row">
+        <h2>🚀 Terminal / REPL</h2>
+        <button id="clear-btn" class="secondary-btn">Clear</button>
+      </div>
       <div id="console-output" class="terminal">
-        <div class="log-msg" style="color:#646cff">Welcome to Kefir v1.1. Type 'clear' to clean.</div>
+        <div class="log-msg" style="color:var(--text-accent)">Welcome to Kefir v2.0 - Agentic Edition</div>
+        <div class="log-msg" style="color:var(--text-muted)">Type 'help' for commands.</div>
       </div>
       <div class="repl-input-container">
-        <span id="prompt-label">&gt;&gt;&gt;</span>
-        <input type="text" id="repl-input" autocomplete="off" spellcheck="false" />
+        <span id="prompt-label">>>></span>
+        <input type="text" id="repl-input" autocomplete="off" spellcheck="false" placeholder="Type command..." />
       </div>
     </div>
   </div>
 `
 
-// ... (Rest of UI Logic handles toggle, file reading, and REPL input history)
+// --- DOM ELEMENTS ---
 const fileInput = document.querySelector<HTMLInputElement>('#kf-input');
 const codePreview = document.querySelector<HTMLTextAreaElement>('#code-preview');
 const runBtn = document.querySelector<HTMLButtonElement>('#run-btn');
+const clearBtn = document.querySelector<HTMLButtonElement>('#clear-btn');
 const consoleOutput = document.querySelector<HTMLDivElement>('#console-output');
 const replInput = document.querySelector<HTMLInputElement>('#repl-input');
 const promptLabel = document.querySelector<HTMLSpanElement>('#prompt-label');
@@ -120,10 +207,14 @@ const modal = document.querySelector<HTMLDivElement>('#guide-modal');
 const guideBtn = document.querySelector<HTMLButtonElement>('#guide-btn');
 const closeBtn = document.querySelector<HTMLButtonElement>('#close-guide');
 
+// --- EVENT LISTENERS: MODAL ---
 guideBtn?.addEventListener('click', () => modal?.classList.remove('hidden'));
 closeBtn?.addEventListener('click', () => modal?.classList.add('hidden'));
+modal?.addEventListener('click', (e) => {
+  if (e.target === modal) modal.classList.add('hidden');
+});
 
-// --- CUSTOM INPUT HANDLING ---
+// --- CUSTOM INPUT HANDLER ---
 const inputModal = document.querySelector<HTMLDivElement>('#input-modal');
 const inputPrompt = document.querySelector<HTMLHeadingElement>('#input-prompt');
 const inputField = document.querySelector<HTMLInputElement>('#custom-input-field');
@@ -158,42 +249,68 @@ async function handleInput(text: string): Promise<string | null> {
 }
 interpreter.setInputHandler(handleInput);
 
-let currentFileCode = '';
+// --- LOGGING ---
+function logToScreen(log: LogEntry, isRepl = false) {
+  if (!consoleOutput) return;
+  const p = document.createElement('div');
+  p.className = log.type === 'error' ? 'log-error' : 'log-msg';
+
+  if (log.type === 'error') {
+    p.innerText = `🛑 Line ${log.line || '?'}: ${log.message}`;
+  } else {
+    p.innerText = isRepl ? `=> ${log.message}` : log.message;
+  }
+
+  consoleOutput.appendChild(p);
+  consoleOutput.scrollTop = consoleOutput.scrollHeight;
+}
+
+// --- FILE LOAD ---
+fileInput?.addEventListener('change', (e) => {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (!file || !file.name.endsWith('.kf')) { alert('Please upload a .kf file'); return; }
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    if (codePreview && evt.target?.result) codePreview.value = evt.target.result as string;
+  };
+  reader.readAsText(file);
+});
+
+// --- RUN BUTTON ---
+runBtn?.addEventListener('click', async () => {
+  const code = codePreview?.value || "";
+  if (!code.trim()) return;
+
+  if (consoleOutput) {
+    const sep = document.createElement('div');
+    sep.className = 'log-msg';
+    sep.style.color = 'var(--text-accent)';
+    sep.style.marginTop = '1rem';
+    sep.innerText = '--- Executing ---';
+    consoleOutput.appendChild(sep);
+  }
+
+  if (runBtn) { runBtn.textContent = 'Running...'; runBtn.disabled = true; }
+
+  // Yield to UI slightly
+  setTimeout(async () => {
+    await interpreter.evaluate(code, (log) => logToScreen(log), false);
+    if (runBtn) { runBtn.textContent = '▶ Run Code'; runBtn.disabled = false; }
+  }, 50);
+});
+
+// --- CLEAR BUTTON ---
+clearBtn?.addEventListener('click', () => {
+  if (consoleOutput) consoleOutput.innerHTML = '';
+});
+
+// --- REPL LOGIC ---
 // Restore history from LocalStorage
 const savedHistory = localStorage.getItem('kefir_history');
 const commandHistory: string[] = savedHistory ? JSON.parse(savedHistory) : [];
 let historyIndex = -1;
 let multilineBuffer = '';
 let indentLevel = 0;
-
-function logToScreen(log: LogEntry, isRepl = false) {
-  if (!consoleOutput) return;
-  const p = document.createElement('div');
-  p.className = log.type === 'error' ? 'log-error' : 'log-msg';
-  if (log.type === 'error') p.innerText = `🛑 ${log.message}`;
-  else p.innerText = isRepl ? `${log.message}` : log.message;
-  consoleOutput.appendChild(p);
-  consoleOutput.scrollTop = consoleOutput.scrollHeight;
-}
-
-fileInput?.addEventListener('change', (e) => {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (!file || !file.name.endsWith('.kf')) { alert('Please upload a .kf file'); return; }
-  const reader = new FileReader();
-  reader.onload = (evt) => {
-    currentFileCode = evt.target?.result as string;
-    if (codePreview) codePreview.value = currentFileCode;
-  };
-  reader.readAsText(file);
-});
-
-runBtn?.addEventListener('click', async () => {
-  if (!currentFileCode) return;
-  if (consoleOutput) consoleOutput.innerHTML = '<div class="log-msg">--- Running File ---</div>';
-  if (runBtn) { runBtn.textContent = 'Running...'; runBtn.disabled = true; }
-  await interpreter.evaluate(currentFileCode, (log) => logToScreen(log), false);
-  if (runBtn) { runBtn.textContent = 'Run File'; runBtn.disabled = false; }
-});
 
 replInput?.addEventListener('keydown', async (e) => {
   if (e.key === 'ArrowUp') {
@@ -233,6 +350,15 @@ replInput?.addEventListener('keydown', async (e) => {
       return;
     }
 
+    if (trimmedLine === 'help') {
+      logToScreen({ type: 'output', message: "available commands:" });
+      logToScreen({ type: 'output', message: "  help        : show this help message" });
+      logToScreen({ type: 'output', message: "  clear / cls : clear the terminal" });
+      logToScreen({ type: 'output', message: "  print(...)  : print values" });
+      logToScreen({ type: 'output', message: "  entry _main : define entry point (for full files)" });
+      return;
+    }
+
     if (multilineBuffer) {
       multilineBuffer += '\n' + line;
     } else {
@@ -251,23 +377,29 @@ replInput?.addEventListener('keydown', async (e) => {
     } else {
       if (trimmedLine !== '') {
         commandHistory.push(multilineBuffer.trim());
-        // Save history to LocalStorage
-        if (commandHistory.length > 50) commandHistory.shift(); // Limit size
+        if (commandHistory.length > 50) commandHistory.shift();
         localStorage.setItem('kefir_history', JSON.stringify(commandHistory));
 
         historyIndex = -1;
         replInput.disabled = true;
-        await interpreter.evaluate(multilineBuffer, (log) => logToScreen(log, true), true);
-        replInput.disabled = false;
+        // Run async
+        setTimeout(async () => {
+          await interpreter.evaluate(multilineBuffer, (log) => logToScreen(log, true), true);
+          replInput.disabled = false;
+          replInput.focus();
+        }, 10);
       }
       multilineBuffer = '';
       indentLevel = 0;
       if (promptLabel) promptLabel.innerText = '>>>';
     }
-    replInput.focus();
   }
 });
 
-document.querySelector('.repl-panel')?.addEventListener('click', () => {
-  replInput?.focus();
+// Focus REPL on panel click
+document.querySelector('.repl-panel')?.addEventListener('click', (e) => {
+  // Don't focus if clicking buttons
+  if ((e.target as HTMLElement).tagName !== 'BUTTON') {
+    replInput?.focus();
+  }
 });

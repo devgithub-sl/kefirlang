@@ -554,7 +554,7 @@ export class KefirInterpreter {
 
             if (token.value === 'mut' || token.value === 'let' || token.value === 'const') {
                 const isMutable = token.value === 'mut';
-                consume(); const varName = consume().value; consume();
+                consume(); const varName = consume().value;
                 let declaredType = null;
                 if (peek().value === ':') {
                     consume(); declaredType = consume().value; if (peek().value === ':') consume();
@@ -567,6 +567,7 @@ export class KefirInterpreter {
                     onLog({ type: 'error', message: `Type Error: Variable '${varName}' declared as '${declaredType}' but got ${typeof val}`, line: token.line });
                 }
                 this.defineVar(varName, val, isMutable, declaredType);
+                this.lastExpressionResult = val; // REPL Feedback
                 return i;
             }
 
@@ -588,6 +589,7 @@ export class KefirInterpreter {
                 enumObj.__struct_type = 'enum';
                 // Store as immutable global variable
                 this.defineVar(enumName, enumObj, false, 'enum');
+                this.lastExpressionResult = enumObj; // REPL Feedback
                 return i;
             }
 
@@ -600,6 +602,7 @@ export class KefirInterpreter {
                     const val = await this.parseExpression(tokens, i, (n) => i = n, onLog);
                     if (peek().value === ';') consume();
                     this.assignIndex(varName, index, val, token.line, onLog);
+                    this.lastExpressionResult = val; // REPL Feedback
                     return i;
                 }
             }
@@ -609,6 +612,7 @@ export class KefirInterpreter {
                 const val = await this.parseExpression(tokens, i, (n) => i = n, onLog);
                 if (peek().value === ';') consume();
                 this.assignVar(varName, val, token.line, onLog);
+                this.lastExpressionResult = val; // REPL Feedback
                 return i;
             }
 
@@ -624,11 +628,14 @@ export class KefirInterpreter {
                         onLog({ type: 'error', message: `Runtime Error: Cannot mutate immutable variable '${objName}'`, line: token.line });
                     } else if (typeof variable.value === 'object' && variable.value !== null) {
                         variable.value[propName] = val;
+                        this.lastExpressionResult = val; // REPL Feedback
                     } else {
                         onLog({ type: 'error', message: `Runtime Error: '${objName}' is not an object`, line: token.line });
+                        this.lastExpressionResult = undefined;
                     }
                 } else {
                     onLog({ type: 'error', message: `Runtime Error: Undefined variable '${objName}'`, line: token.line });
+                    this.lastExpressionResult = undefined;
                 }
                 return i;
             }
