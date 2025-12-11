@@ -1,18 +1,39 @@
 entry _main;
 
+struct StringWrapper {
+    raw :string:,
+    
+    #init(s :string:) {
+        self.raw = s;
+    },
+
+    def clean() -> :string: {
+        return trim(self.raw);
+    },
+
+    def splitParts() -> :array: {
+        return split(self.clean(), " ");
+    }
+}
+
 _main:
   print("--- StdLib Expansion Test ---");
 
   // String Utils
   mut text = "  Hello Kefir  ";
   print("Original: '$text'");
-  print("Trimmed: '" + trim(text) + "'");
+  
+  // Using Wrapper Struct
+  mut wrapper = StringWrapper(text);
+  print("Cleaned: '" + wrapper.clean() + "'");
+  
+  // Native Funcs
   print("Upper: " + upper(text));
   print("Lower: " + lower(text));
   print("Replaced: " + replace(text, "Kefir", "World"));
   
   // Array & Split/Join
-  mut parts = split(trim(text), " ");
+  mut parts = wrapper.splitParts();
   print("Split: ", parts);
   
   mut joined = join(parts, " <-> ");

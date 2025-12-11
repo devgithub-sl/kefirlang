@@ -1,0 +1,39 @@
+entry _main;
+
+enum Status {
+    Idle,
+    Running,
+    Error,
+    Done
+}
+
+_main:
+    print("--- Variables & Constants Demo ---");
+
+    const PI = 3.14159;
+    print("Const PI: $PI");
+
+    // PI = 3.14; // Uncommenting this should cause "Runtime Error: Cannot reassign immutable variable 'PI'"
+
+    mut currentStatus = Status.Idle;
+    print("Current Status: $currentStatus (Should be 0)");
+
+    currentStatus = Status.Running;
+    
+    if currentStatus == Status.Running:
+        print("System is Running...");
+    :;
+
+    match currentStatus:
+        case Status.Running:
+            print("Match Confirmed: Running");
+        :;
+        default:
+            print("Match Default");
+        :;
+    :;
+
+    const APP_NAME = "KefirApp";
+    print("Welcome to $APP_NAME");
+
+:;

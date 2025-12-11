@@ -1,0 +1,40 @@
+entry _main;
+
+struct Todo {
+    id :int:,
+    title :string:,
+    completed :bool:,
+    
+    #init(data :object:) {
+        self.id = data.id;
+        self.title = data.title;
+        self.completed = data.completed;
+    },
+
+    def printStatus() {
+        mut status = "Pending";
+        if self.completed: status = "Done"; :;
+        print("[$status] $self.title (ID: $self.id)");
+    }
+}
+
+_main:
+  print("--- Async Connectivity & Structs ---");
+  
+  // Test 1: Fetch
+  print("1. Fetching Todo item...");
+  mut data = fetch("https://jsonplaceholder.typicode.com/todos/1");
+  
+  if data != null:
+      print("Fetch Success! Parsing...");
+      mut item = Todo(data);
+      item.printStatus();
+  :; else:
+      print("Fetch Failed!");
+  :;
+
+  // Test 2: Sleep
+  print("2. Sleeping for 2 seconds...");
+  sleep(2000);
+  print("Wake up! Script finished.");
+:;

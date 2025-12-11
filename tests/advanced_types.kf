@@ -1,0 +1,43 @@
+entry _main;
+
+protocol Greeter {
+    def greet(whom :string:) -> :string:
+}
+
+enum ServerState :string: {
+    Start: "Starting...",
+    Run: "Running",
+    Stop: "Stopped"
+}
+
+struct Bot : Greeter {
+    name :string:,
+    model :string:,
+    
+    #init(n :string:) {
+        self.name = n;
+        self.model = "T-800";
+    },
+
+    def greet(whom :string:) -> :string: {
+        return "Hello $whom, I am $self.name ($self.model).";
+    }
+}
+
+_main:
+    print("--- Advanced Types Demo ---");
+    
+    // Test Enum Backing Types
+    print("Server State: " + ServerState.Start);
+
+    // Test Custom Constructor
+    mut b = Bot("Arnold");
+    print("Bot Name: $b.name");
+    print("Bot Model: $b.model"); // Should be T-800 set by #init
+
+    // Test Method Call
+    mut msg = b.greet("Human");
+    print(msg);
+
+    // Protocol conformance is checked at runtime instantiation (no error expected)
+:;

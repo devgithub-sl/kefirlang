@@ -1,0 +1,18 @@
+entry _main;
+
+_main:
+    print("--- Performance Benchmark ---");
+    print("Counting to 100,000... (This used to be slow)");
+
+    mut start = 0;
+    mut end = 100000;
+    mut count = 0;
+
+    // Use a while loop to test the optimization
+    while count < end:
+        count = count + 1;
+    :;
+
+    print("Done! Counted to $count.");
+    print("If you see this immediately, optimization works!");
+:;

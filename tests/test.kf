@@ -1,0 +1,44 @@
+// declaration of entry point
+entry _main;
+
+// Struct Definition with #init
+struct Point {
+    x :float:,
+    y :float:,
+    
+    #init(x :float:, y :float:) {
+        self.x = x;
+        self.y = y;
+    },
+
+    def dist() -> :float: {
+        return sqrt(self.x * self.x + self.y * self.y);
+    }
+}
+
+// Global Variables
+mut x = 10;
+const greeting = "Hello Kefir";
+
+defn isTrue(val :bool:) -> :bool::
+  return val
+
+_main:
+  print("--- Basic Types ---");
+  print(x);
+  print(greeting);
+  
+  // String Access
+  print(greeting[0]); // H
+  print(greeting[99]); // Should fail gracefully (Red log) or return undefined
+
+  // Struct Usage
+  print("--- Struct Usage ---");
+  mut p = Point(3.0, 4.0);
+  print("Point:", p);
+  print("Distance from origin:", p.dist()); // Should be 5
+
+  // Boolean Logic
+  mut check = isTrue(True);
+  print("Check:", check);
+:; 

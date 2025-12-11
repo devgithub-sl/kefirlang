@@ -1,0 +1,75 @@
+entry _main;
+
+enum ItemType :string: {
+    Weapon: "Weapon",
+    Defense: "Shield",
+    Potion: "Consumable"
+}
+
+struct Inventory {
+    items :array:,
+    capacity :int:,
+
+    #init(cap :int:) {
+        self.items = [];
+        self.capacity = cap;
+    },
+
+    def addItem(name :string:) {
+        if len(self.items) < self.capacity:
+            push(self.items, name);
+            print("Added $name to inventory.");
+        :; else:
+            print("Inventory full! Cannot add $name.");
+        :;
+    },
+
+    def removeItem() -> :string: {
+        return pop(self.items);
+    }
+}
+
+_main:
+  print("--- 1. String Interpolation ---");
+  mut name = "Kefir";
+  mut level = 99;
+  print("Player $name is level $level.");
+
+  print("--- 2. Match Statement & Enums ---");
+  mut item = ItemType.Weapon;
+  match item:
+      case ItemType.Weapon: print("Equipped a Weapon"); :;
+      case ItemType.Defense: print("Equipped a Shield"); :;
+      default: print("Equipped Unknown"); :;
+  :;
+
+  print("--- 3. Structs & Methods (New!) ---");
+  mut backpack = Inventory(5); // Capacity 5
+  
+  backpack.addItem("Sword");
+  backpack.addItem("Shield");
+  backpack.addItem(ItemType.Potion);
+  
+  print("Backpack items:", backpack.items);
+  
+  mut last = backpack.removeItem();
+  print("Popped:", last);
+
+  print("--- 4. Safety Checks ---");
+  // A. Type Safety in Math
+  mut safe_calc = 10 / "invalid"; 
+  print("Result of invalid math is safe:", safe_calc);
+
+  // B. Method Call Safety
+  // backpack.addItem(); // Would error: expects 1 argument
+
+  print("--- 5. HTML DSL ---");
+  mut title = "User Dashboard";
+  mut html_out = html {
+      div {
+          h1 $title
+          p "Welcome, $name"
+      }
+  };
+  print(html_out);
+:;
