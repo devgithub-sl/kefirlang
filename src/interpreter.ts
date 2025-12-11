@@ -46,6 +46,7 @@ export class KefirInterpreter {
     // Performance Optimization: Time Slicing
     private opCounter = 0;
     private readonly YIELD_THRESHOLD = 20000; // Run 20,000 ops before yielding
+    private lastExpressionResult: any = undefined;
 
     private inputHandler: ((text: string) => Promise<string | null>) | null = null;
 
@@ -67,6 +68,7 @@ export class KefirInterpreter {
             this.scopeStack = [this.globalVariables];
         }
         this.opCounter = 0;
+        this.lastExpressionResult = undefined;
         this.initNativeFunctions();
     }
 
@@ -165,10 +167,27 @@ export class KefirInterpreter {
     }
 
     private getVar(name: string): Variable | undefined {
-        for (let i = this.scopeStack.length - 1; i >= 0; i--) {
+        // Optimization: Most lookups are either Local (stack top) or Global (stack bottom).
+        // Check these two first to avoid iterating the whole stack in deep recursion.
+
+        // 1. Check Local Scope
+        const len = this.scopeStack.length;
+        const localScope = this.scopeStack[len - 1];
+        if (localScope.has(name)) return localScope.get(name);
+
+        // 2. Check Global Scope (if distinct from local)
+        if (len > 1) {
+            const globalScope = this.scopeStack[0];
+            if (globalScope.has(name)) return globalScope.get(name);
+        }
+
+        // 3. Search Intermediate Scopes (closures/nested blocks)
+        // Start from second-to-last, go down to second item (index 1)
+        for (let i = len - 2; i > 0; i--) {
             const scope = this.scopeStack[i];
             if (scope.has(name)) return scope.get(name);
         }
+
         return undefined;
     }
 
@@ -216,6 +235,8 @@ export class KefirInterpreter {
             logCallback({ type: 'error', message: `Runtime Error: '${name}' is not indexable`, line });
         }
     }
+
+
 
     private checkType(val: any, typeName: string): boolean {
         if (typeName === 'any') return true;
@@ -490,12 +511,13 @@ export class KefirInterpreter {
                 }
                 const res = await this.executeStatement(tokens, i, onLog);
                 if (typeof res === 'object') {
-                    if (res.type === 'expression_result' && res.value !== undefined) {
-                        onLog({ type: 'output', message: `=> ${this.formatValue(res.value)}` });
-                    }
                     if (res.type !== 'expression_result') break;
                     i = tokens.findIndex((t, index) => index >= i && t.value === ';') + 1;
                 } else {
+                    if (this.lastExpressionResult !== undefined) {
+                        onLog({ type: 'output', message: `=> ${this.formatValue(this.lastExpressionResult)}` });
+                        this.lastExpressionResult = undefined;
+                    }
                     i = res as number;
                 }
             }
@@ -757,7 +779,7 @@ export class KefirInterpreter {
             if (peek().value === ';') consume();
 
             if (expressionValue !== undefined && expressionValue !== null) {
-                return { type: 'expression_result', value: expressionValue };
+                this.lastExpressionResult = expressionValue;
             }
 
             return i;

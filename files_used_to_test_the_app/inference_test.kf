@@ -1,0 +1,28 @@
+entry _main;
+
+_main:
+    print("--- Type Inference Test ---");
+
+    // 1. Infer Number
+    mut num = 42; 
+    print("num is " + num);
+    // Should pass
+    num = 100;
+    print("num changed to " + num);
+
+    // Should FAIL at runtime if we try to assign a string
+    // num = "string"; // Uncommenting this line should cause a Type Error
+
+    // 2. Infer String
+    let str = "Hello";
+    print("str is " + str);
+    // str = 123; // Should fail (immutable AND wrong type)
+
+    // 3. Infer Array
+    mut arr = [1, 2, 3];
+    print("arr is " + arr);
+    arr = [4, 5]; // OK
+    // arr = 10; // Should fail
+
+    print("Inference Logic Verified!");
+:;
