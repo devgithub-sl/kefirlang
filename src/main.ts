@@ -77,6 +77,13 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         <div class="modal-body">${syntaxGuide}</div>
       </div>
     </div>
+    <div id="input-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3 id="input-prompt">Input Required</h3>
+        <input type="text" id="custom-input-field" autocomplete="off" />
+        <button id="submit-input">Submit</button>
+      </div>
+    </div>
 
     <div class="panel">
       <div class="header-row">
@@ -116,20 +123,57 @@ const closeBtn = document.querySelector<HTMLButtonElement>('#close-guide');
 guideBtn?.addEventListener('click', () => modal?.classList.remove('hidden'));
 closeBtn?.addEventListener('click', () => modal?.classList.add('hidden'));
 
+// --- CUSTOM INPUT HANDLING ---
+const inputModal = document.querySelector<HTMLDivElement>('#input-modal');
+const inputPrompt = document.querySelector<HTMLHeadingElement>('#input-prompt');
+const inputField = document.querySelector<HTMLInputElement>('#custom-input-field');
+const submitInputBtn = document.querySelector<HTMLButtonElement>('#submit-input');
+
+async function handleInput(text: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    if (inputPrompt) inputPrompt.innerText = text || "Input Value:";
+    inputModal?.classList.remove('hidden');
+    inputField?.focus();
+
+    const submit = () => {
+      const val = inputField?.value || "";
+      if (inputField) inputField.value = '';
+      inputModal?.classList.add('hidden');
+      cleanup();
+      resolve(val);
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') submit();
+    };
+
+    const cleanup = () => {
+      submitInputBtn?.removeEventListener('click', submit);
+      inputField?.removeEventListener('keydown', onKey);
+    };
+
+    submitInputBtn?.addEventListener('click', submit);
+    inputField?.addEventListener('keydown', onKey);
+  });
+}
+interpreter.setInputHandler(handleInput);
+
 let currentFileCode = '';
-const commandHistory: string[] = [];
+// Restore history from LocalStorage
+const savedHistory = localStorage.getItem('kefir_history');
+const commandHistory: string[] = savedHistory ? JSON.parse(savedHistory) : [];
 let historyIndex = -1;
 let multilineBuffer = '';
 let indentLevel = 0;
 
 function logToScreen(log: LogEntry, isRepl = false) {
-    if (!consoleOutput) return;
-    const p = document.createElement('div');
-    p.className = log.type === 'error' ? 'log-error' : 'log-msg';
-    if (log.type === 'error') p.innerText = `🛑 ${log.message}`;
-    else p.innerText = isRepl ? `${log.message}` : log.message;
-    consoleOutput.appendChild(p);
-    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+  if (!consoleOutput) return;
+  const p = document.createElement('div');
+  p.className = log.type === 'error' ? 'log-error' : 'log-msg';
+  if (log.type === 'error') p.innerText = `🛑 ${log.message}`;
+  else p.innerText = isRepl ? `${log.message}` : log.message;
+  consoleOutput.appendChild(p);
+  consoleOutput.scrollTop = consoleOutput.scrollHeight;
 }
 
 fileInput?.addEventListener('change', (e) => {
@@ -138,88 +182,92 @@ fileInput?.addEventListener('change', (e) => {
   const reader = new FileReader();
   reader.onload = (evt) => {
     currentFileCode = evt.target?.result as string;
-    if(codePreview) codePreview.value = currentFileCode;
+    if (codePreview) codePreview.value = currentFileCode;
   };
   reader.readAsText(file);
 });
 
 runBtn?.addEventListener('click', async () => {
   if (!currentFileCode) return;
-  if(consoleOutput) consoleOutput.innerHTML = '<div class="log-msg">--- Running File ---</div>';
-  if(runBtn) { runBtn.textContent = 'Running...'; runBtn.disabled = true; }
+  if (consoleOutput) consoleOutput.innerHTML = '<div class="log-msg">--- Running File ---</div>';
+  if (runBtn) { runBtn.textContent = 'Running...'; runBtn.disabled = true; }
   await interpreter.evaluate(currentFileCode, (log) => logToScreen(log), false);
-  if(runBtn) { runBtn.textContent = 'Run File'; runBtn.disabled = false; }
+  if (runBtn) { runBtn.textContent = 'Run File'; runBtn.disabled = false; }
 });
 
 replInput?.addEventListener('keydown', async (e) => {
-    if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (historyIndex < commandHistory.length - 1) {
-            historyIndex++;
-            replInput.value = commandHistory[commandHistory.length - 1 - historyIndex];
-        }
-    } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (historyIndex > 0) {
-            historyIndex--;
-            replInput.value = commandHistory[commandHistory.length - 1 - historyIndex];
-        } else if (historyIndex === 0) {
-            historyIndex = -1;
-            replInput.value = '';
-        }
-    } else if (e.key === 'Enter') {
-        const line = replInput.value;
-        const trimmedLine = line.trim();
-        
-        if (!trimmedLine && multilineBuffer === '') return;
-
-        const echo = document.createElement('div');
-        echo.className = 'log-input';
-        echo.innerText = (multilineBuffer ? '... ' : '>>> ') + line;
-        consoleOutput?.appendChild(echo);
-        consoleOutput!.scrollTop = consoleOutput!.scrollHeight;
-
-        replInput.value = '';
-        
-        if (trimmedLine === 'clear' || trimmedLine === 'cls') {
-            if(consoleOutput) consoleOutput.innerHTML = '';
-            multilineBuffer = '';
-            indentLevel = 0;
-            if(promptLabel) promptLabel.innerText = '>>>';
-            return;
-        }
-
-        if (multilineBuffer) {
-            multilineBuffer += '\n' + line;
-        } else {
-            multilineBuffer = line;
-        }
-
-        if (trimmedLine.endsWith(':') || trimmedLine.endsWith('{')) {
-            indentLevel++;
-        }
-        if (trimmedLine === ':;' || trimmedLine === '}') {
-            indentLevel = Math.max(0, indentLevel - 1);
-        }
-
-        if (indentLevel > 0) {
-            if(promptLabel) promptLabel.innerText = '...';
-        } else {
-            if (trimmedLine !== '') {
-                commandHistory.push(multilineBuffer.trim());
-                historyIndex = -1;
-                replInput.disabled = true;
-                await interpreter.evaluate(multilineBuffer, (log) => logToScreen(log, true), true);
-                replInput.disabled = false;
-            }
-            multilineBuffer = '';
-            indentLevel = 0;
-            if(promptLabel) promptLabel.innerText = '>>>';
-        }
-        replInput.focus();
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (historyIndex < commandHistory.length - 1) {
+      historyIndex++;
+      replInput.value = commandHistory[commandHistory.length - 1 - historyIndex];
     }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (historyIndex > 0) {
+      historyIndex--;
+      replInput.value = commandHistory[commandHistory.length - 1 - historyIndex];
+    } else if (historyIndex === 0) {
+      historyIndex = -1;
+      replInput.value = '';
+    }
+  } else if (e.key === 'Enter') {
+    const line = replInput.value;
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine && multilineBuffer === '') return;
+
+    const echo = document.createElement('div');
+    echo.className = 'log-input';
+    echo.innerText = (multilineBuffer ? '... ' : '>>> ') + line;
+    consoleOutput?.appendChild(echo);
+    consoleOutput!.scrollTop = consoleOutput!.scrollHeight;
+
+    replInput.value = '';
+
+    if (trimmedLine === 'clear' || trimmedLine === 'cls') {
+      if (consoleOutput) consoleOutput.innerHTML = '';
+      multilineBuffer = '';
+      indentLevel = 0;
+      if (promptLabel) promptLabel.innerText = '>>>';
+      return;
+    }
+
+    if (multilineBuffer) {
+      multilineBuffer += '\n' + line;
+    } else {
+      multilineBuffer = line;
+    }
+
+    if (trimmedLine.endsWith(':') || trimmedLine.endsWith('{')) {
+      indentLevel++;
+    }
+    if (trimmedLine === ':;' || trimmedLine === '}') {
+      indentLevel = Math.max(0, indentLevel - 1);
+    }
+
+    if (indentLevel > 0) {
+      if (promptLabel) promptLabel.innerText = '...';
+    } else {
+      if (trimmedLine !== '') {
+        commandHistory.push(multilineBuffer.trim());
+        // Save history to LocalStorage
+        if (commandHistory.length > 50) commandHistory.shift(); // Limit size
+        localStorage.setItem('kefir_history', JSON.stringify(commandHistory));
+
+        historyIndex = -1;
+        replInput.disabled = true;
+        await interpreter.evaluate(multilineBuffer, (log) => logToScreen(log, true), true);
+        replInput.disabled = false;
+      }
+      multilineBuffer = '';
+      indentLevel = 0;
+      if (promptLabel) promptLabel.innerText = '>>>';
+    }
+    replInput.focus();
+  }
 });
 
 document.querySelector('.repl-panel')?.addEventListener('click', () => {
-    replInput?.focus();
+  replInput?.focus();
 });

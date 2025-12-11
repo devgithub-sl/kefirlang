@@ -140,3 +140,21 @@ button:disabled { background: #3a3d41; cursor: wait; }
   overflow-x: auto;
   color: #9cdcfe;
 }
+
+/* Input Modal */
+#input-modal .modal-content {
+  width: 400px;
+  text-align: center;
+}
+#input-modal input {
+  width: 100%;
+  padding: 10px;
+  margin: 15px 0;
+  background: #3a3a3a;
+  border: 1px solid #555;
+  color: #fff;
+  border-radius: 4px;
+}
+#input-modal button {
+  width: 100%;
+}

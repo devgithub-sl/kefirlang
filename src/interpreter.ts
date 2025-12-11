@@ -73,6 +73,20 @@ export class KefirInterpreter {
         this.nativeFunctions.set('random', () => Math.random());
         this.nativeFunctions.set('sin', (args) => Math.sin(args[0]));
         this.nativeFunctions.set('cos', (args) => Math.cos(args[0]));
+        // String Utils
+        this.nativeFunctions.set('upper', (args) => String(args[0]).toUpperCase());
+        this.nativeFunctions.set('lower', (args) => String(args[0]).toLowerCase());
+        this.nativeFunctions.set('trim', (args) => String(args[0]).trim());
+        this.nativeFunctions.set('split', (args) => String(args[0]).split(args[1]));
+        this.nativeFunctions.set('replace', (args) => String(args[0]).replace(new RegExp(args[1], 'g'), args[2]));
+        // Array Utils
+        this.nativeFunctions.set('join', (args) => Array.isArray(args[0]) ? args[0].join(args[1] || '') : String(args[0]));
+        this.nativeFunctions.set('reverse', (args) => Array.isArray(args[0]) ? [...args[0]].reverse() : args[0]);
+        this.nativeFunctions.set('contains', (args) => {
+            if (Array.isArray(args[0]) || typeof args[0] === 'string') return args[0].includes(args[1]);
+            return false;
+        });
+
         this.nativeFunctions.set('str', (args) => String(args[0]));
         this.nativeFunctions.set('int', (args) => parseInt(args[0]));
         this.nativeFunctions.set('typeof', (args) => {
@@ -656,6 +670,12 @@ export class KefirInterpreter {
         }
     }
 
+    private inputCallback: ((prompt: string) => Promise<string | null>) | null = null;
+
+    setInputHandler(handler: (prompt: string) => Promise<string | null>) {
+        this.inputCallback = handler;
+    }
+
     private opToName(op: string) {
         if (op === '+') return 'add';
         if (op === '-') return 'sub';
@@ -720,7 +740,14 @@ export class KefirInterpreter {
                 if (tokens[i].type === 'STRING') { promptText = tokens[i].value; i++; }
                 if (tokens[i].value === ')') i++;
                 await new Promise(resolve => setTimeout(resolve, 50));
-                const userInput = prompt(promptText);
+
+                let userInput: string | null = "";
+                if (this.inputCallback) {
+                    userInput = await this.inputCallback(promptText);
+                } else {
+                    userInput = prompt(promptText);
+                }
+
                 const num = parseFloat(userInput || "");
                 return done(!isNaN(num) ? num : userInput, 0);
             }

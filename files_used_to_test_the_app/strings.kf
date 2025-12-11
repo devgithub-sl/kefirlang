@@ -1,0 +1,28 @@
+entry _main;
+
+_main:
+  print("--- StdLib Expansion Test ---");
+
+  // String Utils
+  mut text = "  Hello Kefir  ";
+  print("Original: '$text'");
+  print("Trimmed: '" + trim(text) + "'");
+  print("Upper: " + upper(text));
+  print("Lower: " + lower(text));
+  print("Replaced: " + replace(text, "Kefir", "World"));
+  
+  // Array & Split/Join
+  mut parts = split(trim(text), " ");
+  print("Split: ", parts);
+  
+  mut joined = join(parts, " <-> ");
+  print("Joined: ", joined);
+  
+  mut reversed = reverse(parts);
+  print("Reversed Array: ", reversed);
+  
+  // Contains
+  print("Contains 'Kefir' (String): ", contains(text, "Kefir"));
+  print("Contains 'Kefir' (Array): ", contains(parts, "Kefir"));
+  print("Contains 'Java' (Array): ", contains(parts, "Java"));
+:;

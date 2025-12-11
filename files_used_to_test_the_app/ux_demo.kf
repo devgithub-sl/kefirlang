@@ -1,0 +1,27 @@
+entry _main;
+
+_main:
+  print("--- UX Demo ---");
+  
+  // Custom Input Test
+  print("Testing Custom Input Modal...");
+  mut name = input("Please enter your name: ");
+  
+  if name != "":
+      print("Hello, $name! Welcome to KefirLang.");
+      mut age = input("How old are you? ");
+      
+      // Since input returns string or number, check if it parsed as number
+      if typeof(age) == "number":
+          print("You are $age years old.");
+          mut nextYear = age + 1;
+          print("Next year you will be $nextYear.");
+      :; else:
+          print("That's not a number, but that's okay.");
+      :;
+  :; else:
+      print("You didn't type anything!");
+  :;
+
+  print("Try refreshing the page. Your REPL history (ArrowUp) should be saved!");
+:;
