@@ -485,8 +485,17 @@ export class KefirInterpreter {
 
             if (['struct', 'def', 'defn'].includes(token.value)) {
                 if (token.value === 'struct') {
-                    while (peek().value !== '}' && peek().type !== 'EOF') consume();
-                    consume();
+                    // Skip until matching brace
+                    while (peek().value !== '{' && peek().type !== 'EOF') consume();
+                    if (peek().value === '{') {
+                        consume();
+                        let depth = 1;
+                        while (depth > 0 && peek().type !== 'EOF') {
+                            if (peek().value === '{') depth++;
+                            if (peek().value === '}') depth--;
+                            consume();
+                        }
+                    }
                 } else {
                     while (peek().value !== ':;' && peek().type !== 'EOF') consume();
                     consume();
