@@ -15,7 +15,7 @@ const KEYWORDS = new Set([
   'struct', 'defer', 'html',
   'match', 'case', 'default'
 ]);
-const BOOLEANS = new Set(['True', 'False']);
+const BOOLEANS = new Set(['True', 'False', 'true', 'false']);
 
 export function tokenize(source: string): Token[] {
   const tokens: Token[] = [];

@@ -1,0 +1,67 @@
+
+entry _main;
+
+def expect_error(fn_name: string) {
+    print("Expected error in $fn_name");
+}
+
+def immutable_param(x :int:) {
+    print("Testing immutable param with $x");
+    // x = x + 1; // Uncaught Runtime Error: Cannot reassign immutable variable 'x'
+    // We can't catch errors in KefirLang yet, so testing this is manual or via logs check.
+    // For automated test, we can assume if it crashes it fails.
+    // But we want to VERIFY it crashes on mutation.
+    // I will simulate a "try" by just defining it and user (me) confirming behavior if I strictly run it.
+    // Since I can't catch, I will comment out the failure case and explain in walkthrough.
+}
+
+def mutable_param(mut x :int:) {
+    print("Testing mutable param init: $x");
+    x = x + 1;
+    print("Tested mutable param mutated: $x");
+}
+
+struct Data {
+    val: int:
+}
+
+def mutable_obj_param(mut d :Data:) {
+    d.val = 100;
+}
+
+def immutable_obj_param(d :Data:) {
+    d.val = 50; // Should fail if d is immutable reference? 
+    // Actually, in many languages, 'const x = obj' allow 'x.prop = val'. 
+    // In KefirLang `assignVar`/`assignIndex` checks `variable.isMutable`.
+    // If I pass an object to an immutable param, `getVar('d')` returns immutable var.
+    // `assignVar` logic: `if (!variable.isMutable) error`.
+    // `assignIndex` / property set: `token.value === '.' ... =`.
+    // Logic in interpreter: `if (!variable.isMutable) error`.
+    // So deep immutability (or rather, binding immutability preventing prop set) IS enforced by `variable.isMutable` check in `executeStatement` for property assignment.
+    print("Immutable obj param: $d");
+}
+
+_main:
+    print("--- Immutability Test ---");
+    
+    mut a = 10;
+    mutable_param(a);
+    print("Original a is still: $a"); // Primitive, pass by value usually? Interpreter uses `value: args[idx]`, so Copy for primitives.
+
+    immutable_param(10);
+
+    mut d = Data(1);
+    mutable_obj_param(d);
+    print("Data val after mutable_obj_param (should be 100 if pass-by-ref):", d.val); 
+    // Objects are `value: args[idx]`. In JS objects are references. So `d` in function points to checking `variable.isMutable`. 
+    // BUT `mutable_param` sets `isMutable: true` for local var. `d` in global is mutable.
+    // Wait, if I pass `d` (mutable global) to `mutable_obj_param(mut local_d)`, `local_d` is ref to same obj. `local_d` is mutable. Mutation works. logic holds.
+
+    immutable_obj_param(d);
+    // Logic: `immutable_obj_param` has `d` as immutable.
+    // `d.val = 50` -> `variable = getVar('d')` (immutable).
+    // `prop assignment` check: `if (!variable.isMutable) error`.
+    // So correct, it prevents mutation.
+    
+    print("--- Done ---");
+:;

@@ -1,0 +1,48 @@
+
+entry _main;
+
+struct Vector {
+    x: number:
+    y: number:
+
+    def add(other: Vector) -> :Vector: {
+        return Vector(self.x + other.x, self.y + other.y);
+    }
+
+    def sub(other: Vector) -> :Vector: {
+        return Vector(self.x - other.x, self.y - other.y);
+    }
+    
+    // Scalar multiplication
+    def mul(scalar: number) -> :Vector: {
+        return Vector(self.x * scalar, self.y * scalar);
+    }
+
+    def eq(other: Vector) -> :boolean: {
+        return self.x == other.x && self.y == other.y;
+    }
+}
+
+_main:
+    print("--- Operator Overloading Test ---");
+    
+    mut v1 = Vector(1, 2);
+    mut v2 = Vector(3, 4);
+
+    mut v3 = v1 + v2;
+    print("v1 + v2 =", v3); // Expected: Vector { x: 4, y: 6 }
+
+    mut v4 = v2 - v1;
+    print("v2 - v1 =", v4); // Expected: Vector { x: 2, y: 2 }
+
+    mut v5 = v1 * 10;
+    print("v1 * 10 =", v5); // Expected: Vector { x: 10, y: 20 }
+
+    if v1 + v2 == Vector(4, 6):
+        print("Equality Check: PASSED");
+    else:
+        print("Equality Check: FAILED");
+    :;
+
+    print("--- Done ---");
+:;

@@ -8,14 +8,14 @@ export interface LogEntry {
 
 interface FunctionDef {
     name: string;
-    params: { name: string, type: string | null }[];
+    params: { name: string, type: string | null, isMutable: boolean }[];
     body: Token[];
     returnType: string | null;
 }
 
 interface ProtocolDef {
     name: string;
-    methods: { name: string, params: { name: string, type: string | null }[], returnType: string | null }[];
+    methods: { name: string, params: { name: string, type: string | null, isMutable: boolean }[], returnType: string | null }[];
 }
 
 interface StructDef {
@@ -144,11 +144,23 @@ export class KefirInterpreter {
         });
         this.nativeFunctions.set('input', async (args) => {
             if (this.inputHandler) {
-                return await this.inputHandler(args[0] || "");
+                const raw = await this.inputHandler(args[0] || "");
+                if (raw === null) return null;
+                if (raw === 'true' || raw === 'True') return true;
+                if (raw === 'false' || raw === 'False') return false;
+                if (!isNaN(Number(raw)) && raw.trim() !== '') return Number(raw);
+                return raw;
             }
             try {
                 // @ts-ignore
-                if (typeof prompt === 'function') return prompt(args[0] || "");
+                if (typeof prompt === 'function') {
+                    const raw = prompt(args[0] || "");
+                    if (raw === null) return null;
+                    if (raw === 'true' || raw === 'True') return true;
+                    if (raw === 'false' || raw === 'False') return false;
+                    if (!isNaN(Number(raw)) && raw.trim() !== '') return Number(raw);
+                    return raw;
+                }
             } catch (e) { }
             return "Test Input";
         });
@@ -258,6 +270,19 @@ export class KefirInterpreter {
         }
     }
 
+    private inferType(val: any): string {
+        if (val === null) return 'any';
+        if (Array.isArray(val)) return 'array';
+        if (typeof val === 'number') return 'number';
+        if (typeof val === 'string') return 'string';
+        if (typeof val === 'boolean') return 'boolean';
+        if (typeof val === 'object') {
+            if (val.__struct_type) return val.__struct_type;
+            return 'object';
+        }
+        return 'any';
+    }
+
     private async executeBlock(tokens: Token[], onLog: (l: LogEntry) => void): Promise<number | ExecutionSignal> {
         let idx = 0;
         const deferStack: Token[][] = [];
@@ -322,10 +347,14 @@ export class KefirInterpreter {
                         const params: any[] = [];
                         while (tokens[i].value !== ')' && tokens[i].type !== 'EOF') {
                             if (tokens[i].value === ',') { i++; continue; }
+
+                            let isMutable = false;
+                            if (tokens[i].value === 'mut') { isMutable = true; i++; }
+
                             const pName = tokens[i++].value;
                             let pType = null;
                             if (tokens[i].value === ':') { i++; pType = tokens[i++].value; if (tokens[i].value === ':') i++; }
-                            params.push({ name: pName, type: pType });
+                            params.push({ name: pName, type: pType, isMutable });
                         }
                         if (tokens[i].value === ')') i++;
                         let rType = null;
@@ -365,10 +394,14 @@ export class KefirInterpreter {
                             const params: any[] = [];
                             while (tokens[i].value !== ')' && tokens[i].type !== 'EOF') {
                                 if (tokens[i].value === ',') { i++; continue; }
+
+                                let isMutable = false;
+                                if (tokens[i].value === 'mut') { isMutable = true; i++; }
+
                                 const pName = tokens[i++].value;
                                 let pType = null;
                                 if (tokens[i].value === ':') { i++; pType = tokens[i++].value; if (tokens[i].value === ':') i++; }
-                                params.push({ name: pName, type: pType });
+                                params.push({ name: pName, type: pType, isMutable });
                             }
                             if (tokens[i].value === ')') i++;
                             if (tokens[i].value === ':') i++;
@@ -383,10 +416,14 @@ export class KefirInterpreter {
                         const params: any[] = [];
                         while (tokens[i].value !== ')' && tokens[i].type !== 'EOF') {
                             if (tokens[i].value === ',') { i++; continue; }
+
+                            let isMutable = false;
+                            if (tokens[i].value === 'mut') { isMutable = true; i++; }
+
                             const pName = tokens[i++].value;
                             let pType = null;
                             if (tokens[i].value === ':') { i++; pType = tokens[i++].value; if (tokens[i].value === ':') i++; }
-                            params.push({ name: pName, type: pType });
+                            params.push({ name: pName, type: pType, isMutable });
                         }
                         if (tokens[i].value === ')') i++;
                         let rType = null;
@@ -415,15 +452,19 @@ export class KefirInterpreter {
             if (token.value === 'def' || token.value === 'defn') {
                 i++; const funcName = tokens[i].value; i++;
                 if (tokens[i].value === '(') i++;
-                const params: { name: string, type: string | null }[] = [];
+                const params: { name: string, type: string | null, isMutable: boolean }[] = [];
                 while (tokens[i].value !== ')' && tokens[i].type !== 'EOF') {
                     if (tokens[i].value === ',') { i++; continue; }
+
+                    let isMutable = false;
+                    if (tokens[i].value === 'mut') { isMutable = true; i++; }
+
                     const paramName = tokens[i++].value;
                     let paramType = null;
                     if (tokens[i].value === ':') {
                         i++; paramType = tokens[i++].value; if (tokens[i].value === ':') i++;
                     }
-                    params.push({ name: paramName, type: paramType });
+                    params.push({ name: paramName, type: paramType, isMutable });
                 }
                 if (tokens[i].value === ')') i++;
 
@@ -566,6 +607,12 @@ export class KefirInterpreter {
                 if (declaredType && !this.checkType(val, declaredType)) {
                     onLog({ type: 'error', message: `Type Error: Variable '${varName}' declared as '${declaredType}' but got ${typeof val}`, line: token.line });
                 }
+
+                // Type Inference
+                if (!declaredType) {
+                    declaredType = this.inferType(val);
+                }
+
                 this.defineVar(varName, val, isMutable, declaredType);
                 this.lastExpressionResult = val; // REPL Feedback
                 return i;
@@ -857,6 +904,7 @@ export class KefirInterpreter {
             if (tokens[i].value === '{' && startBrace) depth++;
 
             if (tokens[i].value === ':;' && depth === 0 && !startBrace) break;
+            if (tokens[i].value === 'else' && depth === 0 && !startBrace) break;
             if (tokens[i].value === ':;' && !startBrace) depth--;
             if (tokens[i].value === ':' && peek(1).value !== ';' && !startBrace) depth++;
 
@@ -875,19 +923,29 @@ export class KefirInterpreter {
                 i++;
                 const right = await this.parseTerm(tokens, i, (n) => i = n, onLog);
 
+                const opName = this.opToName(op);
+
+                // 1. Check for Struct Operator Overloading
+                if (left && typeof left === 'object' && left.__struct_type) {
+                    const structName = left.__struct_type;
+                    const structDef = this.structs.get(structName);
+
+                    if (structDef && structDef.methods.has(opName)) {
+                        const methodDef = structDef.methods.get(opName)!;
+                        // Operator methods take 1 argument (the right operand)
+                        // 'self' is injected automatically.
+                        // e.g. def add(other)
+                        left = await this.callMethod(methodDef, left, [right], tokens[i]?.line || 0, onLog);
+                        continue;
+                    }
+                }
+
+                // 2. Default Math Operations
                 const isMath = ['-', '*', '/', '%'].includes(op);
                 if (isMath && (isNaN(Number(left)) || isNaN(Number(right)))) {
                     onLog({ type: 'error', message: `Runtime Error: Invalid math operation '${left} ${op} ${right}'` });
                     left = 0;
                     continue; // Soft fail
-                }
-
-                if (left && typeof left === 'object' && left.__struct_type) {
-                    const method = `${left.__struct_type}__${this.opToName(op)}`;
-                    if (this.functions.has(method)) {
-                        left = await this.callFunction(method, [left, right], tokens[i]?.line || 0, onLog);
-                        continue;
-                    }
                 }
 
                 if (op === '+') {
@@ -907,6 +965,8 @@ export class KefirInterpreter {
                 else if (op === '%') left = left % right;
                 else if (op === '>') left = left > right;
                 else if (op === '<') left = left < right;
+                else if (op === '>=') left = left >= right;
+                else if (op === '<=') left = left <= right;
                 else if (op === '==') left = left === right;
                 else if (op === '!=') left = left !== right;
                 else if (op === '&&') left = left && right;
@@ -929,7 +989,13 @@ export class KefirInterpreter {
         if (op === '-') return 'sub';
         if (op === '*') return 'mul';
         if (op === '/') return 'div';
+        if (op === '%') return 'mod';
         if (op === '==') return 'eq';
+        if (op === '!=') return 'neq';
+        if (op === '<') return 'lt';
+        if (op === '>') return 'gt';
+        if (op === '<=') return 'lte';
+        if (op === '>=') return 'gte';
         return 'op';
     }
 
@@ -984,7 +1050,7 @@ export class KefirInterpreter {
 
         if (token.type === 'NUMBER') return done(parseFloat(token.value));
         if (token.type === 'CHAR') return done(token.value);
-        if (token.type === 'BOOLEAN') return done(token.value === 'True');
+        if (token.type === 'BOOLEAN') return done(token.value === 'True' || token.value === 'true');
         if (token.type === 'IDENTIFIER' && token.value === 'null') return done(null);
 
         if (token.type === 'IDENTIFIER') {
@@ -1151,7 +1217,7 @@ export class KefirInterpreter {
                     onLog({ type: 'error', message: `Type Error: Argument '${p.name}' expects type '${p.type}'`, line });
                 }
             }
-            localScope.set(p.name, { value: args[idx], isMutable: false, type: p.type });
+            localScope.set(p.name, { value: args[idx], isMutable: p.isMutable, type: p.type });
         });
 
         // Native check hacks moved here or kept in callFunction? 
